@@ -1,0 +1,47 @@
+FROM golang:1.24 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV GOPATH=/go
+ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
+
+RUN apt-get update && apt-get install -y \
+    libnl-3-dev \
+    libnl-genl-3-dev \
+    libcap2-bin \
+    git \
+    make \
+    iproute2 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone https://github.com/google/seesaw.git /build/seesaw
+WORKDIR /build/seesaw
+
+# Si tu repo sigue trayendo esta versión exacta
+RUN sed -i 's/^go 1\.24\.0$/go 1.24/' go.mod
+RUN go mod tidy
+RUN make install
+
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    libnl-3-200 \
+    libnl-genl-3-200 \
+    libcap2-bin \
+    iproute2 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /go/bin/* /usr/local/bin/
+RUN install -d /usr/local/seesaw /etc/seesaw /var/log/seesaw && \
+    for c in ecu engine ha healthcheck ncc watchdog; do \
+        install /usr/local/bin/seesaw_$c /usr/local/seesaw/; \
+    done && \
+    install /usr/local/bin/seesaw_cli /usr/bin/seesaw && \
+    setcap cap_net_raw+ep /usr/local/seesaw/seesaw_ha && \
+    setcap cap_net_raw+ep /usr/local/seesaw/seesaw_healthcheck
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

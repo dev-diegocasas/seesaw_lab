@@ -1,0 +1,82 @@
+networks:
+  seesaw-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.10.0/24
+  backend-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.20.0/24
+
+services:
+
+  # ── Backends nginx ──────────────────────────────────────────
+  web1:
+    image: nginx:alpine
+    container_name: web-backend-1
+    networks:
+      backend-net:
+        ipv4_address: 172.20.20.10
+    volumes:
+      - ./backends/web1:/usr/share/nginx/html:ro
+    restart: unless-stopped
+
+  web2:
+    image: nginx:alpine
+    container_name: web-backend-2
+    networks:
+      backend-net:
+        ipv4_address: 172.20.20.11
+    volumes:
+      - ./backends/web2:/usr/share/nginx/html:ro
+    restart: unless-stopped
+
+  web3:
+    image: nginx:alpine
+    container_name: web-backend-3
+    networks:
+      backend-net:
+        ipv4_address: 172.20.20.12
+    volumes:
+      - ./backends/web3:/usr/share/nginx/html:ro
+    restart: unless-stopped
+
+  # ── Seesaw node1 (master) ───────────────────────────────────
+  seesaw-node1:
+    build:
+      context: .
+      dockerfile: Dockerfile.seesaw
+    container_name: seesaw-node1
+    hostname: seesaw-node1
+    privileged: true
+    network_mode: host          # necesario para manipular IPVS y levantar la VIP
+    volumes:
+      - ./config/node1:/etc/seesaw:ro
+    environment:
+      - SEESAW_NODE_IP=172.20.10.2
+    restart: unless-stopped
+    depends_on:
+      - web1
+      - web2
+      - web3
+
+  # ── Seesaw node2 (backup) ───────────────────────────────────
+  seesaw-node2:
+    build:
+      context: .
+      dockerfile: Dockerfile.seesaw
+    container_name: seesaw-node2
+    hostname: seesaw-node2
+    privileged: true
+    network_mode: host
+    volumes:
+      - ./config/node2:/etc/seesaw:ro
+    environment:
+      - SEESAW_NODE_IP=172.20.10.3
+    restart: unless-stopped
+    depends_on:
+      - web1
+      - web2
+      - web3
