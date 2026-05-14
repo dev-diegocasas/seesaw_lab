@@ -6,6 +6,11 @@ VIP="172.20.10.100"
 
 mkdir -p /var/run/seesaw/engine /var/run/seesaw/ncc /var/run/seesaw/ha /var/log/seesaw
 
+# Intentar setear sysctl para tabla de vecinos (puede fallar en Cloud Shell)
+sysctl -w net.ipv4.neigh.default.gc_thresh1=128 2>/dev/null || true
+sysctl -w net.ipv4.neigh.default.gc_thresh2=512 2>/dev/null || true
+sysctl -w net.ipv4.neigh.default.gc_thresh3=1024 2>/dev/null || true
+
 # Activar IP forwarding (necesario para IPVS NAT)
 echo 1 > /proc/sys/net/ipv4/ip_forward
 

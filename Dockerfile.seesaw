@@ -16,6 +16,9 @@ RUN apt-get update && apt-get install -y \
 RUN git clone https://github.com/google/seesaw.git /build/seesaw
 WORKDIR /build/seesaw
 
+# Parche: sysctl failures no son fatales en entornos containerizados
+RUN sed -i 's/glog.Fatalf("Failed to initialise LB interface/glog.Warningf("Failed to initialise LB interface/g' engine/core.go
+
 # Si tu repo sigue trayendo esta versión exacta
 RUN sed -i 's/^go 1\.24\.0$/go 1.24/' go.mod
 RUN go mod tidy
