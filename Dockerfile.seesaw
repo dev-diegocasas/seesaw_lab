@@ -16,8 +16,13 @@ RUN apt-get update && apt-get install -y \
 RUN git clone https://github.com/google/seesaw.git /build/seesaw
 WORKDIR /build/seesaw
 
-# Parche: sysctl failures no son fatales en entornos containerizados
-RUN sed -i 's/glog.Fatalf("Failed to initialise LB interface/glog.Warningf("Failed to initialise LB interface/g' engine/core.go
+# Parche 1: sysctl no fatal en entornos containerizados (Cloud Shell)
+# Cambia 'return err' por 'continue' en los loops de sysctlInitLB y sysctlInitIface
+RUN sed -i 's/\t\t\treturn err/\t\t\tcontinue/' ncc/sysctl.go
+
+# Parche 2: engine no debe crashear si falla initNetwork (sysctl/IPVS)
+# Cambia log.Fatalf por log.Warningf dentro de initNetwork
+RUN sed -i '/initNetwork/,/^func /s/log.Fatalf(/log.Warningf(/g' engine/core.go
 
 # Si tu repo sigue trayendo esta versión exacta
 RUN sed -i 's/^go 1\.24\.0$/go 1.24/' go.mod
