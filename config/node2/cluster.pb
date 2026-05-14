@@ -19,16 +19,17 @@ node: <
 vserver: <
   name: "http.web@lab"
   entry_address: <
-    fqdn: "vip.lab."
+    fqdn: "seesaw-vip.lab."
   >
   vserver_entry: <
     protocol: TCP
     port: 80
     scheduler: RR
+    mode: NAT
   >
-  backend: < host: < ipv4: "172.20.20.1/24" > weight: 1 >
-  backend: < host: < ipv4: "172.20.20.2/24" > weight: 1 >
-  backend: < host: < ipv4: "172.20.20.3/24" > weight: 1 >
+  backend: < host: < ipv4: "172.20.20.10/24" > weight: 1 >
+  backend: < host: < ipv4: "172.20.20.11/24" > weight: 1 >
+  backend: < host: < ipv4: "172.20.20.12/24" > weight: 1 >
   healthcheck: <
     type: HTTP
     interval: 3

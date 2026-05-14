@@ -43,17 +43,40 @@ services:
       - ./backends/web3:/usr/share/nginx/html:ro
     restart: unless-stopped
 
-  # ── Seesaw node1 (master) ───────────────────────────────────
+  # ── HAProxy (para comparar, IP distinta al VIP de Seesaw) ──
+  haproxy:
+    image: haproxy:alpine
+    container_name: haproxy-lb
+    ports:
+      - "8080:80"
+    networks:
+      seesaw-net:
+        ipv4_address: 172.20.10.200
+      backend-net:
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    restart: unless-stopped
+    depends_on:
+      - web1
+      - web2
+      - web3
+
+  # ── Seesaw Node 1 ──────────────────────────────────────────
   seesaw-node1:
     build:
       context: .
       dockerfile: Dockerfile.seesaw
     container_name: seesaw-node1
-    hostname: seesaw-node1
     privileged: true
-    network_mode: host          # necesario para manipular IPVS y levantar la VIP
+    networks:
+      seesaw-net:
+        ipv4_address: 172.20.10.2
+      backend-net:
+        ipv4_address: 172.20.20.100
     volumes:
-      - ./config/node1:/etc/seesaw:ro
+      - ./config/node1/seesaw.cfg:/etc/seesaw/seesaw.cfg:ro
+      - ./config/node1/cluster.pb:/etc/seesaw/cluster.pb:ro
+      - ./config/node1/watchdog.cfg:/etc/seesaw/watchdog.cfg:ro
     environment:
       - SEESAW_NODE_IP=172.20.10.2
     restart: unless-stopped
@@ -62,17 +85,22 @@ services:
       - web2
       - web3
 
-  # ── Seesaw node2 (backup) ───────────────────────────────────
+  # ── Seesaw Node 2 ──────────────────────────────────────────
   seesaw-node2:
     build:
       context: .
       dockerfile: Dockerfile.seesaw
     container_name: seesaw-node2
-    hostname: seesaw-node2
     privileged: true
-    network_mode: host
+    networks:
+      seesaw-net:
+        ipv4_address: 172.20.10.3
+      backend-net:
+        ipv4_address: 172.20.20.101
     volumes:
-      - ./config/node2:/etc/seesaw:ro
+      - ./config/node2/seesaw.cfg:/etc/seesaw/seesaw.cfg:ro
+      - ./config/node2/cluster.pb:/etc/seesaw/cluster.pb:ro
+      - ./config/node2/watchdog.cfg:/etc/seesaw/watchdog.cfg:ro
     environment:
       - SEESAW_NODE_IP=172.20.10.3
     restart: unless-stopped
@@ -80,3 +108,15 @@ services:
       - web1
       - web2
       - web3
+
+  # ── Cliente de prueba ──────────────────────────────────────
+  test-client:
+    image: alpine:latest
+    container_name: test-client
+    command: ["/bin/sh", "-c", "apk add --no-cache curl >/dev/null 2>&1 && sleep infinity"]
+    networks:
+      - seesaw-net
+    restart: unless-stopped
+    depends_on:
+      - seesaw-node1
+      - seesaw-node2
