@@ -43,24 +43,6 @@ services:
       - ./backends/web3:/usr/share/nginx/html:ro
     restart: unless-stopped
 
-  # ── HAProxy (para comparar, IP distinta al VIP de Seesaw) ──
-  haproxy:
-    image: haproxy:alpine
-    container_name: haproxy-lb
-    ports:
-      - "8080:80"
-    networks:
-      seesaw-net:
-        ipv4_address: 172.20.10.200
-      backend-net:
-    volumes:
-      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
-    restart: unless-stopped
-    depends_on:
-      - web1
-      - web2
-      - web3
-
   # ── Seesaw Node 1 ──────────────────────────────────────────
   seesaw-node1:
     build:
